@@ -1,8 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 
-const GRID_SIZE = 25;
-const CELL_SIZE = 20;
+// Dynamically calculate grid size and cell size
+const calculateGridSize = () => {
+  const maxGridWidth = Math.floor(window.innerWidth * 0.8 / 20); // 80% of screen width
+  const maxGridHeight = Math.floor(window.innerHeight * 0.8 / 20); // 80% of screen height
+  return Math.min(maxGridWidth, maxGridHeight);
+};
+
+const CELL_SIZE = 20; // Fixed cell size
+const GRID_SIZE = calculateGridSize(); // Dynamic grid size
 const INITIAL_SPEED = 100;
 
 const DIRECTIONS = {
@@ -24,6 +31,7 @@ function SnakeGame() {
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [gridSize, setGridSize] = useState(GRID_SIZE);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
 
@@ -33,18 +41,27 @@ function SnakeGame() {
   const gameAreaRef = useRef(null);
   const requestRef = useRef();
 
+  // Adjust grid size on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setGridSize(calculateGridSize());
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Generate food with collision check
   const generateFood = useCallback(() => {
     const newFood = {
-      x: Math.floor(Math.random() * GRID_SIZE),
-      y: Math.floor(Math.random() * GRID_SIZE),
+      x: Math.floor(Math.random() * gridSize),
+      y: Math.floor(Math.random() * gridSize),
     };
     
     if (snake.some(segment => segment.x === newFood.x && segment.y === newFood.y)) {
       return generateFood();
     }
     return newFood;
-  }, [snake]);
+  }, [snake, gridSize]);
 
   // Handle keyboard input
   const handleKeyPress = useCallback((e) => {
@@ -119,8 +136,8 @@ function SnakeGame() {
 
         // Check collisions
         if (
-          head.x < 0 || head.x >= GRID_SIZE ||
-          head.y < 0 || head.y >= GRID_SIZE ||
+          head.x < 0 || head.x >= gridSize ||
+          head.y < 0 || head.y >= gridSize ||
           prevSnake.some(segment => segment.x === head.x && segment.y === head.y)
         ) {
           setGameOver(true);
@@ -142,7 +159,7 @@ function SnakeGame() {
     }
     
     requestRef.current = requestAnimationFrame(gameLoop);
-  }, [direction, food, gameOver, isPaused, generateFood, score]);
+  }, [direction, food, gameOver, isPaused, generateFood, score, gridSize]);
 
   // Set up and clean up game loop
   useEffect(() => {
@@ -181,6 +198,14 @@ function SnakeGame() {
         <div
           ref={gameAreaRef}
           className="game-area"
+          style={{
+            width: gridSize * CELL_SIZE,
+            height: gridSize * CELL_SIZE,
+            position: 'relative',
+            margin: '0 auto',
+            border: '2px solid #000',
+            backgroundColor: '#f0f0f0',
+          }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
